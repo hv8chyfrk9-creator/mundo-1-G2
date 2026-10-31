@@ -25,17 +25,11 @@ local function runFile(name, label, pct)
 		reportError("descarga " .. name, herr or label)
 		return false
 	end
-	reportOk(name .. " descargado (" .. #body .. "b)")
+	reportOk(name .. " (" .. #body .. "b)")
 	local fn, lerr = loadstring(body)
-	if not fn then
-		reportError("loadstring " .. name, tostring(lerr))
-		return false
-	end
+	if not fn then reportError("loadstring " .. name, tostring(lerr)) return false end
 	local ok, runErr = pcall(fn)
-	if not ok then
-		reportError("ejecutar " .. name, tostring(runErr))
-		return false
-	end
+	if not ok then reportError("ejecutar " .. name, tostring(runErr)) return false end
 	reportOk(name .. " OK")
 	return true
 end
@@ -55,6 +49,6 @@ setProgress(58, "Farm", "Pestaña Farm lista")
 task.spawn(function()
 	task.wait(0.15)
 	if not runFile("tab_player.lua", "Cargando Player...", 60) then return end
-	task.wait(0.3)
+	task.wait(0.35)
 	runFile("runtime_fixes.lua", "Parches UI...", 64)
 end)
