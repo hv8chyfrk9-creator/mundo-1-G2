@@ -1,4 +1,4 @@
--- DELTA HUB tab_farm G2: cerebro + UI (sin tsunami)
+-- DELTA HUB tab_farm G2: cerebro + UI + tabs
 local S = getgenv().DeltaHub
 if type(S) ~= "table" then return end
 
@@ -34,6 +34,16 @@ local function runFile(name, label, pct)
 	return true
 end
 
+local function showUI()
+	pcall(function()
+		if S.UI.MainFrame then S.UI.MainFrame.Visible = true end
+		if S.UI.Sidebar then S.UI.Sidebar.Visible = true end
+		if S.UI.FloatingLogo then S.UI.FloatingLogo.Visible = false end
+		if S.UI.SectionTitle then S.UI.SectionTitle.Text = "Farm" end
+		if S.UI.FarmPage then S.UI.FarmPage.Visible = true end
+	end)
+end
+
 if not runFile("farm_brain.lua", "Cargando cerebro...", 51) then return end
 if not (S.Brain and S.Brain.startRoute) then
 	reportError("farm_brain", "S.Brain.startRoute no existe")
@@ -44,11 +54,23 @@ if not (S.UI and S.UI.ContentArea) then
 	reportError("farm_ui", "ContentArea no existe")
 	return
 end
+showUI()
 setProgress(58, "Farm", "Pestaña Farm lista")
 
 task.spawn(function()
-	task.wait(0.15)
-	if not runFile("tab_player.lua", "Cargando Player...", 60) then return end
-	task.wait(0.35)
-	runFile("runtime_fixes.lua", "Parches UI...", 64)
+	task.wait(0.1)
+	runFile("tab_player.lua", "Cargando Player...", 62)
+	task.wait(0.1)
+	runFile("tab_events.lua", "Cargando Events...", 70)
+	task.wait(0.1)
+	runFile("tab_extras.lua", "Cargando Extras...", 80)
+	task.wait(0.1)
+	runFile("runtime_fixes.lua", "Parches UI...", 90)
+	showUI()
+	S.scriptReady = true
+	setProgress(100, "Listo", "Delta Hub G2 activo")
+	if S.fadeAndDestroyLoading then
+		task.delay(0.4, function() S.fadeAndDestroyLoading() end)
+	end
+	reportOk("Carga completa")
 end)
