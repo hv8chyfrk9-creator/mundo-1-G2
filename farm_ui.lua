@@ -409,5 +409,10 @@ task.spawn(function()
 	end
 end)
 
+-- Mostrar como en Hallowen
+if S.UI.MainFrame then S.UI.MainFrame.Visible = true end
+if S.UI.Sidebar then S.UI.Sidebar.Visible = true end
+
 setProgress(57, "Farm", "Pestaña Farm lista")
+if S.fadeAndDestroyLoading then task.delay(0.6, function() S.fadeAndDestroyLoading() end) end
 print("[Delta Hub G2] farm_ui listo")
