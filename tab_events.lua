@@ -1,4 +1,4 @@
--- DELTA HUB tab_events G2 (nombre EXACTO; BattleCoin + número 1-4000)
+-- DELTA HUB tab_events G2 (1 sola pestaña)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
@@ -10,6 +10,12 @@ if type(S) ~= "table" or not S.UI or not S.UI.ContentArea then
 	warn("[Delta Hub] tab_events: falta hub")
 	return
 end
+
+if S._eventsTabBuilt then
+	print("[Delta Hub G2] tab_events ya cargado, skip")
+	return
+end
+S._eventsTabBuilt = true
 
 S.Events = S.Events or {}
 local E = S.Events
@@ -25,7 +31,6 @@ E.searchInterval = 1
 E.busy = false
 E.priority = E.priority or { "chocolate", "battlecoin", "xp", "candy", "specialkeys" }
 
--- Nombres EXACTOS (no contains). BattleCoin se maneja aparte con número.
 local EXACT = {
 	chocolate = { "ChocolateHunt", "Chocolate Hunt" },
 	candy = { "EventCoin", "CandyCorn", "Candy Corn" },
@@ -35,11 +40,6 @@ local EXACT = {
 
 local function setProgress(p, t, s)
 	if S.setProgress then S.setProgress(p, t, s) end
-end
-local function notify(t)
-	if S.Farm and S.Farm.notify then S.Farm.notify(t)
-	elseif S.notify then S.notify(t)
-	else warn("[Delta Hub]", t) end
 end
 local function corner(p, r)
 	local c = Instance.new("UICorner")
@@ -102,20 +102,6 @@ local function createScrollingPage(parent)
 	return sc
 end
 
-local function makeTabButton(name, order)
-	local b = Instance.new("TextButton")
-	b.Parent = S.UI.Sidebar
-	b.Size = UDim2.new(0, 92, 0, 42)
-	b.BackgroundColor3 = Color3.fromRGB(170, 35, 35)
-	b.Font = Enum.Font.GothamBold
-	b.Text = name
-	b.TextColor3 = Color3.fromRGB(255, 255, 255)
-	b.TextSize = 14
-	b.LayoutOrder = order
-	corner(b, 6)
-	return b
-end
-
 local function makeToggleRow(parent, text, order, get, set)
 	local row = Instance.new("Frame")
 	row.Parent = parent
@@ -154,11 +140,28 @@ local function makeToggleRow(parent, text, order, get, set)
 	return row
 end
 
+if S.UI.Sidebar then
+	for _, ch in ipairs(S.UI.Sidebar:GetChildren()) do
+		if ch:IsA("TextButton") and ch.Text == "Events" then
+			pcall(function() ch:Destroy() end)
+		end
+	end
+end
+
 local eventsPage = createScrollingPage(S.UI.ContentArea)
 S.UI.Pages = S.UI.Pages or {}
 S.UI.Pages.Events = eventsPage
 
-local tabEvents = makeTabButton("Events", 3)
+local tabEvents = Instance.new("TextButton")
+tabEvents.Parent = S.UI.Sidebar
+tabEvents.Size = UDim2.new(0, 92, 0, 42)
+tabEvents.BackgroundColor3 = Color3.fromRGB(170, 35, 35)
+tabEvents.Font = Enum.Font.GothamBold
+tabEvents.Text = "Events"
+tabEvents.TextColor3 = Color3.fromRGB(255, 255, 255)
+tabEvents.TextSize = 14
+tabEvents.LayoutOrder = 3
+corner(tabEvents, 6)
 tabEvents.MouseButton1Click:Connect(function()
 	if S.UI.showOnlyPage then S.UI.showOnlyPage(eventsPage, "Events") end
 	if S.UI.SectionTitle then S.UI.SectionTitle.Text = "Events" end
@@ -190,7 +193,6 @@ modeBtn.MouseButton1Click:Connect(function()
 	modeBtn.Text = "Modo: " .. E.collectMode
 end)
 
--- ===== Búsqueda: exacto + BattleCoinN (1-4000) =====
 local function objectPosition(obj)
 	if not obj then return nil end
 	if obj:IsA("BasePart") then return obj.Position end
@@ -202,18 +204,13 @@ end
 
 local function exactKind(name)
 	if not name then return nil end
-
-	-- BattleCoin siempre lleva número (1..4000)
 	local nstr = name:match("^BattleCoin(%d+)$")
 		or name:match("^CoinBattleCoin(%d+)$")
 		or name:match("^Battle Coin(%d+)$")
 	if nstr then
 		local n = tonumber(nstr)
-		if n and n >= 1 and n <= 4000 then
-			return "coin"
-		end
+		if n and n >= 1 and n <= 4000 then return "coin" end
 	end
-
 	for kind, list in pairs(EXACT) do
 		for _, exact in ipairs(list) do
 			if name == exact then return kind end
@@ -239,12 +236,10 @@ local function rememberEvent(obj)
 	local id = tostring(obj:GetFullName())
 	if E.seen[id] then return false end
 	E.seen[id] = true
-
 	if S.Brain and S.Brain.routeRunning and S.Brain.reportFoundEvent then
 		S.Brain.reportFoundEvent({ pos = pos, kind = kind, obj = obj })
 		return true
 	end
-
 	table.insert(E.queue, { obj = obj, pos = pos, kind = kind })
 	return true
 end
@@ -276,18 +271,14 @@ if not S._eventsLoopsStarted then
 			task.wait(E.searchInterval or 1)
 			if not anyOn() then continue end
 			if S.Farm and S.Farm.routeRunning then
-				for _, obj in ipairs(Workspace:GetDescendants()) do
-					rememberEvent(obj)
-				end
+				for _, obj in ipairs(Workspace:GetDescendants()) do rememberEvent(obj) end
 				continue
 			end
 			local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 			if not hrp then continue end
 			E.queue = {}
 			E.seen = {}
-			for _, obj in ipairs(Workspace:GetDescendants()) do
-				rememberEvent(obj)
-			end
+			for _, obj in ipairs(Workspace:GetDescendants()) do rememberEvent(obj) end
 			if #E.queue == 0 then E.searchInterval = 1; continue end
 			local order = {}
 			for i, n in ipairs(E.priority) do order[n] = i end
@@ -321,13 +312,4 @@ if not S._eventsLoopsStarted then
 end
 
 setProgress(82, "Events", "Events listo")
-print("[Delta Hub G2] tab_events listo (BattleCoinN 1-4000)")
-
-task.spawn(function()
-	task.wait(0.2)
-	local body = S.httpGet and select(1, S.httpGet("tab_extras.lua"))
-	if body then
-		local fn = loadstring(body)
-		if fn then pcall(fn) end
-	end
-end)
+print("[Delta Hub G2] tab_events listo (1 pestaña)")
