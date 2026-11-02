@@ -1,6 +1,6 @@
 -- ==========================================
 -- DELTA HUB - Mundo 1 G2 - tab_extras.lua
--- Anti-lag unificado + keycaps 0.5s
+-- Anti-lag unificado + selector colapsable
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -23,8 +23,8 @@ local X = S.Extras
 X.renderOn = X.renderOn or false
 X.statsOn = X.statsOn or false
 X.antiLagOn = X.antiLagOn or false
--- opciones seleccionadas (siempre al menos una)
 X.antiOpts = X.antiOpts or { decorations = true, halloween = true, keycaps = true }
+X.antiSelOpen = X.antiSelOpen or false -- selector cerrado por defecto
 
 local CONFIG_FILE = "DeltaHub_G2_Config.json"
 
@@ -177,15 +177,9 @@ end
 
 local function runAntiLagOnce()
 	local n = 0
-	if X.antiOpts.decorations then
-		n = n + deleteNamed({ "Decorations", "Props", "Decoration" })
-	end
-	if X.antiOpts.halloween then
-		n = n + deleteNamed({ "Halloween", "HalloweenMeshes", "HallowenMeshes" })
-	end
-	if X.antiOpts.keycaps then
-		applyKeycaps()
-	end
+	if X.antiOpts.decorations then n = n + deleteNamed({ "Decorations", "Props", "Decoration" }) end
+	if X.antiOpts.halloween then n = n + deleteNamed({ "Halloween", "HalloweenMeshes", "HallowenMeshes" }) end
+	if X.antiOpts.keycaps then applyKeycaps() end
 	return n
 end
 
@@ -199,16 +193,13 @@ tabExtras.MouseButton1Click:Connect(function()
 	if S.UI.SectionTitle then S.UI.SectionTitle.Text = "Extras" end
 end)
 
--- ===== Anti lag unificado =====
 local antiBody = section(extrasPage, "Anti lag", 1)
 
--- Selector (multi)
 local optLabels = {
 	{ key = "decorations", text = "Decorations / Props" },
 	{ key = "halloween", text = "Halloween / Meshes" },
 	{ key = "keycaps", text = "Keycaps transparentes" },
 }
-local optButtons = {}
 
 local function countSelected()
 	local c = 0
@@ -216,11 +207,51 @@ local function countSelected()
 	return c
 end
 
+local function summaryText()
+	local parts = {}
+	for _, info in ipairs(optLabels) do
+		if X.antiOpts[info.key] then table.insert(parts, info.text) end
+	end
+	if #parts == 0 then return "Ninguna" end
+	return table.concat(parts, ", ")
+end
+
+-- Header del selector (minimizable)
+local selHeader = Instance.new("TextButton")
+selHeader.Parent = antiBody
+selHeader.Size = UDim2.new(1, -4, 0, 30)
+selHeader.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
+selHeader.Font = Enum.Font.Gotham
+selHeader.TextSize = 12
+selHeader.TextColor3 = Color3.fromRGB(240, 240, 245)
+selHeader.TextXAlignment = Enum.TextXAlignment.Left
+selHeader.LayoutOrder = 1
+corner(selHeader, 6)
+
+local selList = Instance.new("Frame")
+selList.Parent = antiBody
+selList.BackgroundTransparency = 1
+selList.Size = UDim2.new(1, 0, 0, 0)
+selList.AutomaticSize = Enum.AutomaticSize.Y
+selList.Visible = X.antiSelOpen
+selList.LayoutOrder = 2
+local selLay = Instance.new("UIListLayout")
+selLay.Parent = selList
+selLay.SortOrder = Enum.SortOrder.LayoutOrder
+selLay.Padding = UDim.new(0, 4)
+
+local function refreshHeader()
+	local arrow = X.antiSelOpen and "▼" or "▶"
+	selHeader.Text = "  " .. arrow .. "  Opciones: " .. summaryText()
+	selList.Visible = X.antiSelOpen
+end
+
 local antiSwitchRefresh
+local optButtons = {}
 
 for i, info in ipairs(optLabels) do
 	local row = Instance.new("TextButton")
-	row.Parent = antiBody
+	row.Parent = selList
 	row.Size = UDim2.new(1, -4, 0, 28)
 	row.BackgroundColor3 = X.antiOpts[info.key] and Color3.fromRGB(40, 90, 50) or Color3.fromRGB(36, 36, 44)
 	row.Font = Enum.Font.Gotham
@@ -240,7 +271,7 @@ for i, info in ipairs(optLabels) do
 		X.antiOpts[info.key] = not was
 		row.BackgroundColor3 = X.antiOpts[info.key] and Color3.fromRGB(40, 90, 50) or Color3.fromRGB(36, 36, 44)
 		row.Text = (X.antiOpts[info.key] and "[x] " or "[ ] ") .. info.text
-		-- Si el interruptor estaba ON → apagarlo
+		refreshHeader()
 		if X.antiLagOn then
 			X.antiLagOn = false
 			if antiSwitchRefresh then antiSwitchRefresh() end
@@ -249,7 +280,12 @@ for i, info in ipairs(optLabels) do
 	end)
 end
 
--- Interruptor principal
+selHeader.MouseButton1Click:Connect(function()
+	X.antiSelOpen = not X.antiSelOpen
+	refreshHeader()
+end)
+refreshHeader()
+
 local _, antiBtn, refreshAnti
 _, antiBtn, refreshAnti = makeToggleRow(antiBody, "Anti lag activo", 10, function() return X.antiLagOn end, function(v)
 	X.antiLagOn = v
@@ -259,9 +295,7 @@ _, antiBtn, refreshAnti = makeToggleRow(antiBody, "Anti lag activo", 10, functio
 		task.spawn(function()
 			while X.antiLagOn do
 				if X.antiOpts.keycaps then applyKeycaps() end
-				if X.antiOpts.decorations or X.antiOpts.halloween then
-					runAntiLagOnce()
-				end
+				if X.antiOpts.decorations or X.antiOpts.halloween then runAntiLagOnce() end
 				task.wait(0.5)
 			end
 		end)
@@ -271,7 +305,6 @@ _, antiBtn, refreshAnti = makeToggleRow(antiBody, "Anti lag activo", 10, functio
 end)
 antiSwitchRefresh = refreshAnti
 
--- Pantalla
 local pantBody = section(extrasPage, "Pantalla", 2)
 makeToggleRow(pantBody, "No render", 1, function() return X.renderOn end, function(v)
 	X.renderOn = v
@@ -283,29 +316,18 @@ makeToggleRow(pantBody, "No render", 1, function() return X.renderOn end, functi
 end)
 makeToggleRow(pantBody, "Stats", 2, function() return X.statsOn end, function(v) X.statsOn = v end)
 
--- ===== Guardado local (básico) =====
 local function saveConfig()
 	pcall(function()
 		if not writefile then return end
-		local F = S.Farm or {}
+		local Farm = S.Farm or {}
 		local P = S.Player or {}
 		local data = {
-			routeMode = F.routeMode,
-			routeSpeed = F.routeSpeed,
-			infinite = F.infinite,
-			delayTime = F.delayTime,
-			selectedRealName = F.selectedRealName,
-			selectedDisplayName = F.selectedDisplayName,
-			speedEnabled = P.speedEnabled,
-			jumpEnabled = P.jumpEnabled,
-			noclipEnabled = P.noclipEnabled,
-			infJumpEnabled = P.infJumpEnabled,
-			customSpeed = P.customSpeed,
-			customJump = P.customJump,
-			antiOpts = X.antiOpts,
-			renderOn = X.renderOn,
-			statsOn = X.statsOn,
-			-- autoRebirth / auto wins NO se restauran como ON
+			routeMode = Farm.routeMode, routeSpeed = Farm.routeSpeed,
+			delayTime = Farm.delayTime, selectedRealName = Farm.selectedRealName,
+			speedEnabled = P.speedEnabled, jumpEnabled = P.jumpEnabled,
+			noclipEnabled = P.noclipEnabled, infJumpEnabled = P.infJumpEnabled,
+			customSpeed = P.customSpeed, customJump = P.customJump,
+			antiOpts = X.antiOpts, renderOn = X.renderOn, statsOn = X.statsOn,
 		}
 		writefile(CONFIG_FILE, HttpService:JSONEncode(data))
 	end)
@@ -314,19 +336,16 @@ end
 local function loadConfig()
 	pcall(function()
 		if not (isfile and isfile(CONFIG_FILE)) then return end
-		local raw = readfile(CONFIG_FILE)
-		local data = HttpService:JSONDecode(raw)
+		local data = HttpService:JSONDecode(readfile(CONFIG_FILE))
 		if type(data) ~= "table" then return end
-		local F = S.Farm
+		local Farm = S.Farm
 		local P = S.Player or {}
-		if data.routeMode then F.routeMode = data.routeMode end
-		if data.routeSpeed then F.routeSpeed = data.routeSpeed end
-		if data.delayTime ~= nil then F.delayTime = data.delayTime end
-		if data.selectedRealName then F.selectedRealName = data.selectedRealName end
-		if data.selectedDisplayName then F.selectedDisplayName = data.selectedDisplayName end
-		-- infinite / autoRebirth se dejan OFF a propósito
-		F.infinite = false
-		F.autoRebirth = false
+		if data.routeMode then Farm.routeMode = data.routeMode end
+		if data.routeSpeed then Farm.routeSpeed = data.routeSpeed end
+		if data.delayTime ~= nil then Farm.delayTime = data.delayTime end
+		if data.selectedRealName then Farm.selectedRealName = data.selectedRealName end
+		Farm.infinite = false
+		Farm.autoRebirth = false
 		if data.speedEnabled ~= nil then P.speedEnabled = data.speedEnabled end
 		if data.jumpEnabled ~= nil then P.jumpEnabled = data.jumpEnabled end
 		if data.noclipEnabled ~= nil then P.noclipEnabled = data.noclipEnabled end
@@ -336,23 +355,20 @@ local function loadConfig()
 		if type(data.antiOpts) == "table" then X.antiOpts = data.antiOpts end
 		if data.renderOn ~= nil then X.renderOn = data.renderOn end
 		if data.statsOn ~= nil then X.statsOn = data.statsOn end
-		X.antiLagOn = false -- siempre off al cargar
+		X.antiLagOn = false
 	end)
 end
 
 loadConfig()
+refreshHeader()
 
--- Guardar al salir / periódicamente
 pcall(function()
-	game:GetService("Players").PlayerRemoving:Connect(function(plr)
+	Players.PlayerRemoving:Connect(function(plr)
 		if plr == player then saveConfig() end
 	end)
 end)
 task.spawn(function()
-	while true do
-		task.wait(20)
-		saveConfig()
-	end
+	while true do task.wait(20); saveConfig() end
 end)
 
 setProgress(95, "Extras", "Extras listo")
