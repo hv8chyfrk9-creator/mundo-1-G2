@@ -1,10 +1,12 @@
 -- ==========================================
 -- DELTA HUB - Mundo 1 G2 - tab_extras.lua
+-- Anti-lag unificado + keycaps 0.5s
 -- ==========================================
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui", 10)
@@ -19,15 +21,20 @@ end
 S.Extras = S.Extras or {}
 local X = S.Extras
 X.renderOn = X.renderOn or false
-X.renderWhite = X.renderWhite ~= false
 X.statsOn = X.statsOn or false
-X.antiKey = X.antiKey or false
+X.antiLagOn = X.antiLagOn or false
+-- opciones seleccionadas (siempre al menos una)
+X.antiOpts = X.antiOpts or { decorations = true, halloween = true, keycaps = true }
+
+local CONFIG_FILE = "DeltaHub_G2_Config.json"
 
 local function setProgress(p, title, sub)
 	if S.setProgress then S.setProgress(p, title, sub) end
 end
 local function notify(text)
-	if S.notify then S.notify(text) else warn("[Delta Hub]", text) end
+	if S.Farm and S.Farm.notify then S.Farm.notify(text)
+	elseif S.notify then S.notify(text)
+	else warn("[Delta Hub]", text) end
 end
 local function corner(parent, r)
 	local c = Instance.new("UICorner")
@@ -104,20 +111,6 @@ local function makeTabButton(name, order)
 	return b
 end
 
-local function makeButton(parent, text, order)
-	local b = Instance.new("TextButton")
-	b.Parent = parent
-	b.Size = UDim2.new(1, -4, 0, 30)
-	b.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
-	b.Text = text
-	b.TextColor3 = Color3.fromRGB(240, 240, 245)
-	b.Font = Enum.Font.Gotham
-	b.TextSize = 12
-	b.LayoutOrder = order or 1
-	corner(b, 6)
-	return b
-end
-
 local function makeToggleRow(parent, text, order, get, set)
 	local row = Instance.new("Frame")
 	row.Parent = parent
@@ -153,7 +146,7 @@ local function makeToggleRow(parent, text, order, get, set)
 		set(not get())
 		refresh()
 	end)
-	return row
+	return row, btn, refresh
 end
 
 local function deleteNamed(prefixes)
@@ -171,6 +164,31 @@ local function deleteNamed(prefixes)
 	return count
 end
 
+local function applyKeycaps()
+	for _, obj in ipairs(Workspace:GetDescendants()) do
+		if obj:IsA("BasePart") then
+			local ln = string.lower(obj.Name)
+			if string.find(ln, "key") or string.find(ln, "cap") then
+				pcall(function() obj.Transparency = 1; obj.CanCollide = false end)
+			end
+		end
+	end
+end
+
+local function runAntiLagOnce()
+	local n = 0
+	if X.antiOpts.decorations then
+		n = n + deleteNamed({ "Decorations", "Props", "Decoration" })
+	end
+	if X.antiOpts.halloween then
+		n = n + deleteNamed({ "Halloween", "HalloweenMeshes", "HallowenMeshes" })
+	end
+	if X.antiOpts.keycaps then
+		applyKeycaps()
+	end
+	return n
+end
+
 local extrasPage = createScrollingPage(S.UI.ContentArea)
 S.UI.Pages = S.UI.Pages or {}
 S.UI.Pages.Extras = extrasPage
@@ -181,49 +199,163 @@ tabExtras.MouseButton1Click:Connect(function()
 	if S.UI.SectionTitle then S.UI.SectionTitle.Text = "Extras" end
 end)
 
+-- ===== Anti lag unificado =====
 local antiBody = section(extrasPage, "Anti lag", 1)
-local decBtn = makeButton(antiBody, "Borrar Decorations + Props", 1)
-decBtn.MouseButton1Click:Connect(function()
-	local n = deleteNamed({ "Decorations", "Props", "Decoration" })
-	notify("Borrados: " .. n)
-end)
-local hallBtn = makeButton(antiBody, "Borrar Halloween + HalloweenMeshes", 2)
-hallBtn.MouseButton1Click:Connect(function()
-	local n = deleteNamed({ "Halloween", "HalloweenMeshes", "HallowenMeshes" })
-	notify("Halloween borrado: " .. n)
-end)
-makeToggleRow(antiBody, "Keycaps transparentes (loop)", 3, function() return X.antiKey end, function(v)
-	X.antiKey = v
+
+-- Selector (multi)
+local optLabels = {
+	{ key = "decorations", text = "Decorations / Props" },
+	{ key = "halloween", text = "Halloween / Meshes" },
+	{ key = "keycaps", text = "Keycaps transparentes" },
+}
+local optButtons = {}
+
+local function countSelected()
+	local c = 0
+	for _, v in pairs(X.antiOpts) do if v then c = c + 1 end end
+	return c
+end
+
+local antiSwitchRefresh
+
+for i, info in ipairs(optLabels) do
+	local row = Instance.new("TextButton")
+	row.Parent = antiBody
+	row.Size = UDim2.new(1, -4, 0, 28)
+	row.BackgroundColor3 = X.antiOpts[info.key] and Color3.fromRGB(40, 90, 50) or Color3.fromRGB(36, 36, 44)
+	row.Font = Enum.Font.Gotham
+	row.Text = (X.antiOpts[info.key] and "[x] " or "[ ] ") .. info.text
+	row.TextColor3 = Color3.fromRGB(240, 240, 245)
+	row.TextSize = 12
+	row.TextXAlignment = Enum.TextXAlignment.Left
+	row.LayoutOrder = i
+	corner(row, 6)
+	optButtons[info.key] = row
+	row.MouseButton1Click:Connect(function()
+		local was = X.antiOpts[info.key]
+		if was and countSelected() <= 1 then
+			notify("Debe quedar al menos 1 opción")
+			return
+		end
+		X.antiOpts[info.key] = not was
+		row.BackgroundColor3 = X.antiOpts[info.key] and Color3.fromRGB(40, 90, 50) or Color3.fromRGB(36, 36, 44)
+		row.Text = (X.antiOpts[info.key] and "[x] " or "[ ] ") .. info.text
+		-- Si el interruptor estaba ON → apagarlo
+		if X.antiLagOn then
+			X.antiLagOn = false
+			if antiSwitchRefresh then antiSwitchRefresh() end
+			notify("Anti lag OFF (cambiaste opciones)")
+		end
+	end)
+end
+
+-- Interruptor principal
+local _, antiBtn, refreshAnti
+_, antiBtn, refreshAnti = makeToggleRow(antiBody, "Anti lag activo", 10, function() return X.antiLagOn end, function(v)
+	X.antiLagOn = v
 	if v then
+		runAntiLagOnce()
+		notify("Anti lag ON")
 		task.spawn(function()
-			while X.antiKey do
-				for _, obj in ipairs(Workspace:GetDescendants()) do
-					if obj:IsA("BasePart") and (string.find(string.lower(obj.Name), "key") or string.find(string.lower(obj.Name), "cap")) then
-						pcall(function() obj.Transparency = 1; obj.CanCollide = false end)
-					end
+			while X.antiLagOn do
+				if X.antiOpts.keycaps then applyKeycaps() end
+				if X.antiOpts.decorations or X.antiOpts.halloween then
+					runAntiLagOnce()
 				end
-				task.wait(2)
+				task.wait(0.5)
 			end
 		end)
+	else
+		notify("Anti lag OFF")
 	end
 end)
+antiSwitchRefresh = refreshAnti
 
+-- Pantalla
 local pantBody = section(extrasPage, "Pantalla", 2)
 makeToggleRow(pantBody, "No render", 1, function() return X.renderOn end, function(v)
 	X.renderOn = v
 	pcall(function()
 		local lighting = game:GetService("Lighting")
-		if v then
-			lighting.GlobalShadows = false
-			lighting.FogEnd = 9e9
-		else
-			lighting.GlobalShadows = true
-		end
+		if v then lighting.GlobalShadows = false; lighting.FogEnd = 9e9
+		else lighting.GlobalShadows = true end
 	end)
 end)
 makeToggleRow(pantBody, "Stats", 2, function() return X.statsOn end, function(v) X.statsOn = v end)
 
+-- ===== Guardado local (básico) =====
+local function saveConfig()
+	pcall(function()
+		if not writefile then return end
+		local F = S.Farm or {}
+		local P = S.Player or {}
+		local data = {
+			routeMode = F.routeMode,
+			routeSpeed = F.routeSpeed,
+			infinite = F.infinite,
+			delayTime = F.delayTime,
+			selectedRealName = F.selectedRealName,
+			selectedDisplayName = F.selectedDisplayName,
+			speedEnabled = P.speedEnabled,
+			jumpEnabled = P.jumpEnabled,
+			noclipEnabled = P.noclipEnabled,
+			infJumpEnabled = P.infJumpEnabled,
+			customSpeed = P.customSpeed,
+			customJump = P.customJump,
+			antiOpts = X.antiOpts,
+			renderOn = X.renderOn,
+			statsOn = X.statsOn,
+			-- autoRebirth / auto wins NO se restauran como ON
+		}
+		writefile(CONFIG_FILE, HttpService:JSONEncode(data))
+	end)
+end
+
+local function loadConfig()
+	pcall(function()
+		if not (isfile and isfile(CONFIG_FILE)) then return end
+		local raw = readfile(CONFIG_FILE)
+		local data = HttpService:JSONDecode(raw)
+		if type(data) ~= "table" then return end
+		local F = S.Farm
+		local P = S.Player or {}
+		if data.routeMode then F.routeMode = data.routeMode end
+		if data.routeSpeed then F.routeSpeed = data.routeSpeed end
+		if data.delayTime ~= nil then F.delayTime = data.delayTime end
+		if data.selectedRealName then F.selectedRealName = data.selectedRealName end
+		if data.selectedDisplayName then F.selectedDisplayName = data.selectedDisplayName end
+		-- infinite / autoRebirth se dejan OFF a propósito
+		F.infinite = false
+		F.autoRebirth = false
+		if data.speedEnabled ~= nil then P.speedEnabled = data.speedEnabled end
+		if data.jumpEnabled ~= nil then P.jumpEnabled = data.jumpEnabled end
+		if data.noclipEnabled ~= nil then P.noclipEnabled = data.noclipEnabled end
+		if data.infJumpEnabled ~= nil then P.infJumpEnabled = data.infJumpEnabled end
+		if data.customSpeed then P.customSpeed = data.customSpeed end
+		if data.customJump then P.customJump = data.customJump end
+		if type(data.antiOpts) == "table" then X.antiOpts = data.antiOpts end
+		if data.renderOn ~= nil then X.renderOn = data.renderOn end
+		if data.statsOn ~= nil then X.statsOn = data.statsOn end
+		X.antiLagOn = false -- siempre off al cargar
+	end)
+end
+
+loadConfig()
+
+-- Guardar al salir / periódicamente
+pcall(function()
+	game:GetService("Players").PlayerRemoving:Connect(function(plr)
+		if plr == player then saveConfig() end
+	end)
+end)
+task.spawn(function()
+	while true do
+		task.wait(20)
+		saveConfig()
+	end
+end)
+
 setProgress(95, "Extras", "Extras listo")
 if S.fadeAndDestroyLoading then task.delay(0.5, function() S.fadeAndDestroyLoading() end) end
 print("[Delta Hub G2] tab_extras listo")
-notify("G2 world listo")
+notify("G2 listo")
