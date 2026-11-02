@@ -1,6 +1,6 @@
 -- ==========================================
 -- DELTA HUB - Mundo 1 G2 - tab_player.lua
--- Solo pestaña Player
+-- Solo pestaña Player | 62.5% -> 75%
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -42,57 +42,187 @@ local function corner(parent, r)
 	return c
 end
 
-local playerPage = Instance.new("ScrollingFrame")
-playerPage.Name = "PlayerPage"
-playerPage.Parent = S.UI.ContentArea
-playerPage.BackgroundTransparency = 1
-playerPage.Size = UDim2.new(1, 0, 1, 0)
-playerPage.CanvasSize = UDim2.new(0, 0, 0, 380)
-playerPage.ScrollBarThickness = 4
-playerPage.Visible = false
+local function section(parent, title, order)
+	local wrap = Instance.new("Frame")
+	wrap.Parent = parent
+	wrap.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+	wrap.BackgroundTransparency = 0.25
+	wrap.Size = UDim2.new(1, -8, 0, 0)
+	wrap.AutomaticSize = Enum.AutomaticSize.Y
+	wrap.LayoutOrder = order or 1
+	corner(wrap, 8)
+	local lay = Instance.new("UIListLayout")
+	lay.Parent = wrap
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, 6)
+	local pad = Instance.new("UIPadding")
+	pad.Parent = wrap
+	pad.PaddingTop = UDim.new(0, 8)
+	pad.PaddingBottom = UDim.new(0, 8)
+	pad.PaddingLeft = UDim.new(0, 6)
+	pad.PaddingRight = UDim.new(0, 6)
+	local head = Instance.new("TextLabel")
+	head.Parent = wrap
+	head.BackgroundTransparency = 1
+	head.Size = UDim2.new(1, 0, 0, 20)
+	head.Font = Enum.Font.GothamBold
+	head.Text = title
+	head.TextColor3 = Color3.fromRGB(255, 255, 255)
+	head.TextSize = 13
+	head.TextXAlignment = Enum.TextXAlignment.Left
+	head.LayoutOrder = 0
+	return wrap
+end
+
+local function makeSwitch(parent, text, order)
+	local row = Instance.new("Frame")
+	row.Parent = parent
+	row.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
+	row.Size = UDim2.new(1, -4, 0, 36)
+	row.LayoutOrder = order or 1
+	corner(row, 6)
+	local label = Instance.new("TextLabel")
+	label.Parent = row
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.new(1, -58, 1, 0)
+	label.Position = UDim2.new(0, 8, 0, 0)
+	label.Font = Enum.Font.GothamBold
+	label.Text = text
+	label.TextColor3 = Color3.fromRGB(240, 240, 245)
+	label.TextSize = 12
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	local hit = Instance.new("TextButton")
+	hit.Parent = row
+	hit.BackgroundColor3 = Color3.fromRGB(70, 70, 78)
+	hit.Position = UDim2.new(1, -46, 0.5, -11)
+	hit.Size = UDim2.new(0, 36, 0, 22)
+	hit.Text = ""
+	corner(hit, 99)
+	local knob = Instance.new("Frame")
+	knob.Parent = hit
+	knob.BackgroundColor3 = Color3.fromRGB(200, 200, 210)
+	knob.Size = UDim2.new(0, 18, 0, 18)
+	knob.Position = UDim2.new(0, 2, 0.5, -9)
+	corner(knob, 99)
+	return row, hit, knob, label
+end
+
+local function createScrollingPage(parent)
+	local sc = Instance.new("ScrollingFrame")
+	sc.Parent = parent
+	sc.BackgroundTransparency = 1
+	sc.Size = UDim2.new(1, 0, 1, 0)
+	sc.CanvasSize = UDim2.new(0, 0, 0, 0)
+	sc.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	sc.ScrollBarThickness = 4
+	sc.Visible = false
+	local lay = Instance.new("UIListLayout")
+	lay.Parent = sc
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, 8)
+	local pad = Instance.new("UIPadding")
+	pad.Parent = sc
+	pad.PaddingTop = UDim.new(0, 4)
+	pad.PaddingBottom = UDim.new(0, 8)
+	return sc
+end
+
+local function makeTabButton(name, order)
+	local b = Instance.new("TextButton")
+	b.Parent = S.UI.Sidebar
+	b.Size = UDim2.new(0, 92, 0, 42)
+	b.BackgroundColor3 = Color3.fromRGB(170, 35, 35)
+	b.Font = Enum.Font.GothamBold
+	b.Text = name
+	b.TextColor3 = Color3.fromRGB(255, 255, 255)
+	b.TextSize = 14
+	b.LayoutOrder = order
+	corner(b, 6)
+	return b
+end
+
+-- Page
+local playerPage = createScrollingPage(S.UI.ContentArea)
 S.UI.Pages = S.UI.Pages or {}
 S.UI.Pages.Player = playerPage
 
-local function makeToggle(parent, label, y, get, set)
-	local row = Instance.new("TextButton")
-	row.Parent = parent
-	row.Position = UDim2.new(0, 4, 0, y)
-	row.Size = UDim2.new(1, -8, 0, 32)
-	row.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
-	row.Font = Enum.Font.GothamBold
-	row.Text = label .. ": " .. (get() and "ON" or "OFF")
-	row.TextColor3 = get() and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 120, 120)
-	row.TextSize = 12
-	corner(row, 6)
-	row.MouseButton1Click:Connect(function()
-		set(not get())
-		row.Text = label .. ": " .. (get() and "ON" or "OFF")
-		row.TextColor3 = get() and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 120, 120)
-	end)
-	return row
+local tabPlayer = makeTabButton("Player", 2)
+tabPlayer.MouseButton1Click:Connect(function()
+	if S.UI.showOnlyPage then
+		S.UI.showOnlyPage(playerPage, "Player")
+	end
+	if S.UI.SectionTitle then S.UI.SectionTitle.Text = "Player" end
+end)
+
+local mov = section(playerPage, "Movimiento", 1)
+
+local function setSwitch(row, hit, knob, on)
+	if on then
+		hit.BackgroundColor3 = Color3.fromRGB(40, 140, 70)
+		knob.Position = UDim2.new(1, -20, 0.5, -9)
+	else
+		hit.BackgroundColor3 = Color3.fromRGB(70, 70, 78)
+		knob.Position = UDim2.new(0, 2, 0.5, -9)
+	end
 end
 
-makeToggle(playerPage, "Speed", 8, function() return P.speedEnabled end, function(v) P.speedEnabled = v end)
-makeToggle(playerPage, "Jump", 46, function() return P.jumpEnabled end, function(v) P.jumpEnabled = v end)
-makeToggle(playerPage, "Noclip", 84, function() return P.noclipEnabled end, function(v)
-	P.noclipEnabled = v
-	if S.Signals and S.Signals.SetNoclip then S.Signals.SetNoclip(v) end
+local speedRow, speedHit, speedKnob = makeSwitch(mov, "Speed boost", 1)
+setSwitch(speedRow, speedHit, speedKnob, P.speedEnabled)
+speedHit.MouseButton1Click:Connect(function()
+	P.speedEnabled = not P.speedEnabled
+	setSwitch(speedRow, speedHit, speedKnob, P.speedEnabled)
 end)
-makeToggle(playerPage, "Inf Jump", 122, function() return P.infJumpEnabled end, function(v) P.infJumpEnabled = v end)
 
 local speedBox = Instance.new("TextBox")
-speedBox.Parent = playerPage
-speedBox.Position = UDim2.new(0, 4, 0, 160)
-speedBox.Size = UDim2.new(0.5, -8, 0, 28)
-speedBox.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+speedBox.Parent = mov
+speedBox.Size = UDim2.new(1, -4, 0, 28)
+speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+speedBox.Text = tostring(P.customSpeed or 16)
+speedBox.TextColor3 = Color3.fromRGB(240, 240, 245)
 speedBox.Font = Enum.Font.Gotham
-speedBox.Text = tostring(P.customSpeed)
-speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedBox.PlaceholderText = "Speed value"
+speedBox.TextSize = 12
+speedBox.LayoutOrder = 2
 corner(speedBox, 6)
 speedBox.FocusLost:Connect(function()
 	local n = tonumber(speedBox.Text)
 	if n and n > 0 then P.customSpeed = n end
+end)
+
+local jumpRow, jumpHit, jumpKnob = makeSwitch(mov, "Jump power", 3)
+setSwitch(jumpRow, jumpHit, jumpKnob, P.jumpEnabled)
+jumpHit.MouseButton1Click:Connect(function()
+	P.jumpEnabled = not P.jumpEnabled
+	setSwitch(jumpRow, jumpHit, jumpKnob, P.jumpEnabled)
+end)
+
+local jumpBox = Instance.new("TextBox")
+jumpBox.Parent = mov
+jumpBox.Size = UDim2.new(1, -4, 0, 28)
+jumpBox.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+jumpBox.Text = tostring(P.customJump or 50)
+jumpBox.TextColor3 = Color3.fromRGB(240, 240, 245)
+jumpBox.Font = Enum.Font.Gotham
+jumpBox.TextSize = 12
+jumpBox.LayoutOrder = 4
+corner(jumpBox, 6)
+jumpBox.FocusLost:Connect(function()
+	local n = tonumber(jumpBox.Text)
+	if n and n > 0 then P.customJump = n end
+end)
+
+local noclipRow, noclipHit, noclipKnob = makeSwitch(mov, "Noclip", 5)
+setSwitch(noclipRow, noclipHit, noclipKnob, P.noclipEnabled)
+noclipHit.MouseButton1Click:Connect(function()
+	P.noclipEnabled = not P.noclipEnabled
+	setSwitch(noclipRow, noclipHit, noclipKnob, P.noclipEnabled)
+	if S.Signals and S.Signals.SetNoclip then S.Signals.SetNoclip(P.noclipEnabled) end
+end)
+
+local infRow, infHit, infKnob = makeSwitch(mov, "Infinite jump", 6)
+setSwitch(infRow, infHit, infKnob, P.infJumpEnabled)
+infHit.MouseButton1Click:Connect(function()
+	P.infJumpEnabled = not P.infJumpEnabled
+	setSwitch(infRow, infHit, infKnob, P.infJumpEnabled)
 end)
 
 -- Apply loops
@@ -108,7 +238,6 @@ task.spawn(function()
 	end
 end)
 
--- Noclip signal
 S.Signals.SetNoclip = function(on)
 	P.noclipEnabled = on
 	task.spawn(function()
@@ -124,7 +253,6 @@ S.Signals.SetNoclip = function(on)
 	end)
 end
 
--- Inf jump
 UserInputService.JumpRequest:Connect(function()
 	if P.infJumpEnabled then
 		local char = player.Character
