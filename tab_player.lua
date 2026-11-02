@@ -1,6 +1,5 @@
 -- ==========================================
 -- DELTA HUB - Mundo 1 G2 - tab_player.lua
--- Solo pestaña Player | 62.5% -> 75%
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -13,7 +12,7 @@ if not playerGui then return end
 
 local S = getgenv().DeltaHub
 if type(S) ~= "table" or not S.UI or not S.UI.ContentArea then
-	warn("[Delta Hub] tab_player: falta hub (tab_farm/init)")
+	warn("[Delta Hub] tab_player: falta hub")
 	return
 end
 
@@ -25,9 +24,6 @@ P.noclipEnabled = P.noclipEnabled or false
 P.infJumpEnabled = P.infJumpEnabled or false
 P.customSpeed = P.customSpeed or 16
 P.customJump = P.customJump or 50
-
-local BASE = S.BASE_URL or "https://raw.githubusercontent.com/hv8chyfrk9-creator/mundo-1-G2/main/"
-local NEXT_URL = BASE .. "tab_events.lua"
 
 local function setProgress(p, title, sub)
 	if S.setProgress then S.setProgress(p, title, sub) end
@@ -104,7 +100,7 @@ local function makeSwitch(parent, text, order)
 	knob.Size = UDim2.new(0, 18, 0, 18)
 	knob.Position = UDim2.new(0, 2, 0.5, -9)
 	corner(knob, 99)
-	return row, hit, knob, label
+	return row, hit, knob
 end
 
 local function createScrollingPage(parent)
@@ -141,22 +137,19 @@ local function makeTabButton(name, order)
 	return b
 end
 
--- Page
 local playerPage = createScrollingPage(S.UI.ContentArea)
 S.UI.Pages = S.UI.Pages or {}
 S.UI.Pages.Player = playerPage
 
 local tabPlayer = makeTabButton("Player", 2)
 tabPlayer.MouseButton1Click:Connect(function()
-	if S.UI.showOnlyPage then
-		S.UI.showOnlyPage(playerPage, "Player")
-	end
+	if S.UI.showOnlyPage then S.UI.showOnlyPage(playerPage, "Player") end
 	if S.UI.SectionTitle then S.UI.SectionTitle.Text = "Player" end
 end)
 
 local mov = section(playerPage, "Movimiento", 1)
 
-local function setSwitch(row, hit, knob, on)
+local function setSwitch(hit, knob, on)
 	if on then
 		hit.BackgroundColor3 = Color3.fromRGB(40, 140, 70)
 		knob.Position = UDim2.new(1, -20, 0.5, -9)
@@ -166,11 +159,11 @@ local function setSwitch(row, hit, knob, on)
 	end
 end
 
-local speedRow, speedHit, speedKnob = makeSwitch(mov, "Speed boost", 1)
-setSwitch(speedRow, speedHit, speedKnob, P.speedEnabled)
+local _, speedHit, speedKnob = makeSwitch(mov, "Speed boost", 1)
+setSwitch(speedHit, speedKnob, P.speedEnabled)
 speedHit.MouseButton1Click:Connect(function()
 	P.speedEnabled = not P.speedEnabled
-	setSwitch(speedRow, speedHit, speedKnob, P.speedEnabled)
+	setSwitch(speedHit, speedKnob, P.speedEnabled)
 end)
 
 local speedBox = Instance.new("TextBox")
@@ -188,11 +181,11 @@ speedBox.FocusLost:Connect(function()
 	if n and n > 0 then P.customSpeed = n end
 end)
 
-local jumpRow, jumpHit, jumpKnob = makeSwitch(mov, "Jump power", 3)
-setSwitch(jumpRow, jumpHit, jumpKnob, P.jumpEnabled)
+local _, jumpHit, jumpKnob = makeSwitch(mov, "Jump power", 3)
+setSwitch(jumpHit, jumpKnob, P.jumpEnabled)
 jumpHit.MouseButton1Click:Connect(function()
 	P.jumpEnabled = not P.jumpEnabled
-	setSwitch(jumpRow, jumpHit, jumpKnob, P.jumpEnabled)
+	setSwitch(jumpHit, jumpKnob, P.jumpEnabled)
 end)
 
 local jumpBox = Instance.new("TextBox")
@@ -210,30 +203,36 @@ jumpBox.FocusLost:Connect(function()
 	if n and n > 0 then P.customJump = n end
 end)
 
-local noclipRow, noclipHit, noclipKnob = makeSwitch(mov, "Noclip", 5)
-setSwitch(noclipRow, noclipHit, noclipKnob, P.noclipEnabled)
+local _, noclipHit, noclipKnob = makeSwitch(mov, "Noclip", 5)
+setSwitch(noclipHit, noclipKnob, P.noclipEnabled)
 noclipHit.MouseButton1Click:Connect(function()
 	P.noclipEnabled = not P.noclipEnabled
-	setSwitch(noclipRow, noclipHit, noclipKnob, P.noclipEnabled)
+	setSwitch(noclipHit, noclipKnob, P.noclipEnabled)
 	if S.Signals and S.Signals.SetNoclip then S.Signals.SetNoclip(P.noclipEnabled) end
 end)
 
-local infRow, infHit, infKnob = makeSwitch(mov, "Infinite jump", 6)
-setSwitch(infRow, infHit, infKnob, P.infJumpEnabled)
+local _, infHit, infKnob = makeSwitch(mov, "Infinite jump", 6)
+setSwitch(infHit, infKnob, P.infJumpEnabled)
 infHit.MouseButton1Click:Connect(function()
 	P.infJumpEnabled = not P.infJumpEnabled
-	setSwitch(infRow, infHit, infKnob, P.infJumpEnabled)
+	setSwitch(infHit, infKnob, P.infJumpEnabled)
 end)
 
--- Apply loops
+-- Solo aplicar speed/jump cuando el boost está ON. Si está OFF, el juego controla.
 task.spawn(function()
 	while true do
 		task.wait(0.1)
 		local char = player.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
 		if hum then
-			if P.speedEnabled then hum.WalkSpeed = P.customSpeed else hum.WalkSpeed = 16 end
-			if P.jumpEnabled then hum.JumpPower = P.customJump end
+			if P.speedEnabled then
+				hum.WalkSpeed = P.customSpeed
+			end
+			-- si speed OFF: no tocar WalkSpeed
+			if P.jumpEnabled then
+				hum.JumpPower = P.customJump
+			end
+			-- si jump OFF: no tocar JumpPower
 		end
 	end
 end)
@@ -264,7 +263,6 @@ end)
 setProgress(70, "Player", "Player listo")
 print("[Delta Hub G2] tab_player listo")
 
--- Chain next
 task.spawn(function()
 	task.wait(0.2)
 	local body = S.httpGet and select(1, S.httpGet("tab_events.lua"))
