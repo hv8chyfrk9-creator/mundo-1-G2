@@ -1,4 +1,4 @@
--- DELTA HUB tab_events (self-contained)
+-- DELTA HUB tab_events G2 (nombre EXACTO únicamente)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
@@ -21,19 +21,26 @@ E.collectMode = E.collectMode or "Tween"
 E.queue = E.queue or {}
 E.seen = E.seen or {}
 E.autoSpecialKeys = E.autoSpecialKeys or false
-E.specialKeyCount = E.specialKeyCount or 0
 E.searchInterval = 1
 E.busy = false
 E.priority = E.priority or { "chocolate", "battlecoin", "xp", "candy", "specialkeys" }
 
-local BASE = S.BASE_URL or "https://raw.githubusercontent.com/hv8chyfrk9-creator/mundo-1-G2/main/"
-local NEXT_URL = BASE .. "tab_extras.lua"
+-- Nombres EXACTOS (no contains)
+local EXACT = {
+	chocolate = { "ChocolateHunt", "Chocolate Hunt" },
+	candy = { "EventCoin", "CandyCorn", "Candy Corn" },
+	coin = { "BattleCoin", "CoinBattleCoin", "Battle Coin" },
+	xp = { "ElectrifiedKeycap", "XPEventKey", "XP Event Key" },
+	specialkeys = { "SpecialKey", "Special Key" },
+}
 
 local function setProgress(p, t, s)
 	if S.setProgress then S.setProgress(p, t, s) end
 end
 local function notify(t)
-	if S.notify then S.notify(t) else warn("[Delta Hub]", t) end
+	if S.Farm and S.Farm.notify then S.Farm.notify(t)
+	elseif S.notify then S.notify(t)
+	else warn("[Delta Hub]", t) end
 end
 local function corner(p, r)
 	local c = Instance.new("UICorner")
@@ -184,8 +191,129 @@ modeBtn.MouseButton1Click:Connect(function()
 	modeBtn.Text = "Modo: " .. E.collectMode
 end)
 
+-- ===== Búsqueda SOLO nombre exacto =====
+local function objectPosition(obj)
+	if not obj then return nil end
+	if obj:IsA("BasePart") then return obj.Position end
+	local ok, piv = pcall(function() return obj:GetPivot() end)
+	if ok and piv then return piv.Position end
+	local p = obj:FindFirstChildWhichIsA("BasePart", true)
+	return p and p.Position
+end
+
+local function exactKind(name)
+	if not name then return nil end
+	for kind, list in pairs(EXACT) do
+		for _, exact in ipairs(list) do
+			if name == exact then return kind end
+		end
+	end
+	return nil
+end
+
+local function anyOn()
+	return E.chocolate or E.candy or E.coin or E.xp or E.autoSpecialKeys
+end
+
+local function rememberEvent(obj)
+	local kind = exactKind(obj.Name)
+	if not kind then return false end
+	if kind == "chocolate" and not E.chocolate then return false end
+	if kind == "candy" and not E.candy then return false end
+	if kind == "coin" and not E.coin then return false end
+	if kind == "xp" and not E.xp then return false end
+	if kind == "specialkeys" and not E.autoSpecialKeys then return false end
+	local pos = objectPosition(obj)
+	if not pos then return false end
+	local id = tostring(obj:GetFullName())
+	if E.seen[id] then return false end
+	E.seen[id] = true
+
+	-- Si hay recorrido en curso → reportar al cerebro y no interrumpir aún
+	if S.Brain and S.Brain.routeRunning and S.Brain.reportFoundEvent then
+		S.Brain.reportFoundEvent({ pos = pos, kind = kind, obj = obj })
+		return true
+	end
+
+	table.insert(E.queue, { obj = obj, pos = pos, kind = kind })
+	return true
+end
+
+local function goToPos(hrp, dest)
+	if not hrp or not dest then return end
+	if E.collectMode == "TP" then
+		hrp.CFrame = CFrame.new(dest + Vector3.new(0, 3, 0))
+	else
+		local bv = hrp:FindFirstChildOfClass("BodyVelocity")
+		if not bv then
+			bv = Instance.new("BodyVelocity")
+			bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+			bv.Parent = hrp
+		end
+		local t0 = tick()
+		while hrp.Parent and (hrp.Position - dest).Magnitude > 3 and tick() - t0 < 12 do
+			bv.Velocity = (dest - hrp.Position).Unit * 80
+			task.wait()
+		end
+		bv.Velocity = Vector3.zero
+	end
+end
+
+if not S._eventsLoopsStarted then
+	S._eventsLoopsStarted = true
+	task.spawn(function()
+		while true do
+			task.wait(E.searchInterval or 1)
+			if not anyOn() then continue end
+			if S.Farm and S.Farm.routeRunning then
+				-- Solo escanear y reportar al cerebro
+				for _, obj in ipairs(Workspace:GetDescendants()) do
+					rememberEvent(obj)
+				end
+				continue
+			end
+			local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+			if not hrp then continue end
+			E.queue = {}
+			E.seen = {}
+			for _, obj in ipairs(Workspace:GetDescendants()) do
+				rememberEvent(obj)
+			end
+			if #E.queue == 0 then E.searchInterval = 1; continue end
+			local order = {}
+			for i, n in ipairs(E.priority) do order[n] = i end
+			local function kk(k) return k == "coin" and "battlecoin" or k end
+			table.sort(E.queue, function(a, b) return (order[kk(a.kind)] or 99) < (order[kk(b.kind)] or 99) end)
+			E.busy = true
+			E.searchInterval = 0.3
+			local returnPos = hrp.Position
+			while #E.queue > 0 and anyOn() and not (S.Farm and S.Farm.routeRunning) do
+				local item = table.remove(E.queue, 1)
+				if not item or not item.pos then continue end
+				if item.obj and not item.obj.Parent then continue end
+				-- Re-check exacto sigue existiendo
+				if item.obj and exactKind(item.obj.Name) == nil then continue end
+				local pos = objectPosition(item.obj) or item.pos
+				goToPos(hrp, pos)
+				task.wait(0.4)
+				hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+				if not hrp then break end
+			end
+			if hrp and returnPos then
+				if E.collectMode == "TP" then
+					hrp.CFrame = CFrame.new(returnPos + Vector3.new(0, 3, 0))
+				else
+					goToPos(hrp, returnPos)
+				end
+			end
+			E.busy = false
+			E.searchInterval = 1
+		end
+	end)
+end
+
 setProgress(82, "Events", "Events listo")
-print("[Delta Hub G2] tab_events listo")
+print("[Delta Hub G2] tab_events listo (exact names)")
 
 task.spawn(function()
 	task.wait(0.2)
