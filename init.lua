@@ -34,7 +34,7 @@ end
 S.targetNamesToDestroy = {
 	"Traps",
 	"ReversePad",
-	"EyeLaser",
+	"EyesLaser",
 	"JumpWall",
 	"Lasers",
 	"Scriptable",
@@ -313,7 +313,6 @@ do
 			S.reportError("descarga " .. name, err)
 		end
 	end
-	-- 167 CFrames (compact en Event-Hallowen)
 	do
 		local shared = "https://raw.githubusercontent.com/hv8chyfrk9-creator/Event-Hallowen/main/"
 		local body, err = S.httpGet(shared .. "g2_routes.lua")
