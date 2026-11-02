@@ -30,7 +30,6 @@ if game.PlaceId ~= G2_PLACE_ID and not getgenv().DeltaHubForceLoad then
 	return
 end
 
--- Cleanup al inicio (NUNCA FinishingLine)
 S.targetNamesToDestroy = {
 	"Traps",
 	"ReversePad",
@@ -40,7 +39,6 @@ S.targetNamesToDestroy = {
 	"Scriptable",
 }
 
--- Anti-lag prefixes (no FinishingLine)
 S.antiLagPrefixes = {
 	"Decorations",
 	"Halloween",
@@ -203,7 +201,7 @@ local function isValidLua(body)
 	if type(body) ~= "string" or #body < 30 then return false end
 	local head = string.lower(string.sub(body, 1, 120))
 	if string.find(head, "<!doctype", 1, true) or string.find(head, "<html", 1, true) then return false end
-	if string.find(head, "local ", 1, true) or string.find(head, "--", 1, true) or string.find(head, "getgenv", 1, true) then
+	if string.find(head, "local ", 1, true) or string.find(head, "--", 1, true) or string.find(head, "getgenv", 1, true) or string.find(head, "return", 1, true) then
 		return true
 	end
 	return false
@@ -261,7 +259,6 @@ end
 function S.runExactCleanup()
 	for _, obj in pairs(Workspace:GetDescendants()) do
 		local name = obj.Name
-		-- NUNCA FinishingLine
 		if name == "FinishingLine" or string.sub(name, 1, 13) == "FinishingLine" then
 			continue
 		end
@@ -298,30 +295,19 @@ S.reportOk("init G2 arranco")
 S.routeCFrames = S.routeCFrames or {}
 S.routeModes = S.routeModes or {}
 do
-	local function loadPart(name)
-		local body, err = S.httpGet(name)
-		if body then
-			local fn, lerr = loadstring(body)
-			if fn then
-				local ok, e = pcall(fn)
-				if ok then S.reportOk(name .. " (" .. #body .. "b)")
-				else S.reportError(name .. " run", tostring(e)) end
-			else
-				S.reportError(name .. " loadstring", tostring(lerr))
-			end
+	-- Rutas SOLO desde este repo (mundo-1-G2)
+	local body, err = S.httpGet("g2_routes.lua")
+	if body then
+		local fn = loadstring(body)
+		if fn then
+			local ok, e = pcall(fn)
+			if ok then S.reportOk("g2_routes.lua")
+			else S.reportError("g2_routes run", tostring(e)) end
 		else
-			S.reportError("descarga " .. name, err)
+			S.reportError("g2_routes", "loadstring")
 		end
-	end
-	do
-		local shared = "https://raw.githubusercontent.com/hv8chyfrk9-creator/Event-Hallowen/main/"
-		local body, err = S.httpGet(shared .. "g2_routes.lua")
-		if body then
-			local fn = loadstring(body)
-			if fn then pcall(fn); S.reportOk("g2_routes.lua") else S.reportError("g2_routes", "loadstring") end
-		else
-			S.reportError("descarga g2_routes", err)
-		end
+	else
+		S.reportError("descarga g2_routes", err)
 	end
 	S.reportOk("CFrames: " .. tostring(#(S.routeCFrames or {})))
 end
