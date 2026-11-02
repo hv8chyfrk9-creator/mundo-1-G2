@@ -1,4 +1,4 @@
--- DELTA HUB tab_events G2 (nombre EXACTO únicamente)
+-- DELTA HUB tab_events G2 (nombre EXACTO; BattleCoin + número 1-4000)
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
@@ -25,11 +25,10 @@ E.searchInterval = 1
 E.busy = false
 E.priority = E.priority or { "chocolate", "battlecoin", "xp", "candy", "specialkeys" }
 
--- Nombres EXACTOS (no contains)
+-- Nombres EXACTOS (no contains). BattleCoin se maneja aparte con número.
 local EXACT = {
 	chocolate = { "ChocolateHunt", "Chocolate Hunt" },
 	candy = { "EventCoin", "CandyCorn", "Candy Corn" },
-	coin = { "BattleCoin", "CoinBattleCoin", "Battle Coin" },
 	xp = { "ElectrifiedKeycap", "XPEventKey", "XP Event Key" },
 	specialkeys = { "SpecialKey", "Special Key" },
 }
@@ -191,7 +190,7 @@ modeBtn.MouseButton1Click:Connect(function()
 	modeBtn.Text = "Modo: " .. E.collectMode
 end)
 
--- ===== Búsqueda SOLO nombre exacto =====
+-- ===== Búsqueda: exacto + BattleCoinN (1-4000) =====
 local function objectPosition(obj)
 	if not obj then return nil end
 	if obj:IsA("BasePart") then return obj.Position end
@@ -203,6 +202,18 @@ end
 
 local function exactKind(name)
 	if not name then return nil end
+
+	-- BattleCoin siempre lleva número (1..4000)
+	local nstr = name:match("^BattleCoin(%d+)$")
+		or name:match("^CoinBattleCoin(%d+)$")
+		or name:match("^Battle Coin(%d+)$")
+	if nstr then
+		local n = tonumber(nstr)
+		if n and n >= 1 and n <= 4000 then
+			return "coin"
+		end
+	end
+
 	for kind, list in pairs(EXACT) do
 		for _, exact in ipairs(list) do
 			if name == exact then return kind end
@@ -229,7 +240,6 @@ local function rememberEvent(obj)
 	if E.seen[id] then return false end
 	E.seen[id] = true
 
-	-- Si hay recorrido en curso → reportar al cerebro y no interrumpir aún
 	if S.Brain and S.Brain.routeRunning and S.Brain.reportFoundEvent then
 		S.Brain.reportFoundEvent({ pos = pos, kind = kind, obj = obj })
 		return true
@@ -266,7 +276,6 @@ if not S._eventsLoopsStarted then
 			task.wait(E.searchInterval or 1)
 			if not anyOn() then continue end
 			if S.Farm and S.Farm.routeRunning then
-				-- Solo escanear y reportar al cerebro
 				for _, obj in ipairs(Workspace:GetDescendants()) do
 					rememberEvent(obj)
 				end
@@ -291,7 +300,6 @@ if not S._eventsLoopsStarted then
 				local item = table.remove(E.queue, 1)
 				if not item or not item.pos then continue end
 				if item.obj and not item.obj.Parent then continue end
-				-- Re-check exacto sigue existiendo
 				if item.obj and exactKind(item.obj.Name) == nil then continue end
 				local pos = objectPosition(item.obj) or item.pos
 				goToPos(hrp, pos)
@@ -313,7 +321,7 @@ if not S._eventsLoopsStarted then
 end
 
 setProgress(82, "Events", "Events listo")
-print("[Delta Hub G2] tab_events listo (exact names)")
+print("[Delta Hub G2] tab_events listo (BattleCoinN 1-4000)")
 
 task.spawn(function()
 	task.wait(0.2)
