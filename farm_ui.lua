@@ -74,252 +74,340 @@ local function ensureHub()
 	local top = Instance.new("Frame")
 	top.Parent = main
 	top.BackgroundColor3 = Color3.fromRGB(24, 24, 32)
-	top.Size = UDim2.new(1, 0, 0, 36)
+	top.Size = UDim2.new(1, 0, 0, 34)
 	corner(top, 10)
+
 	local title = Instance.new("TextLabel")
+	title.Name = "SectionTitle"
 	title.Parent = top
 	title.BackgroundTransparency = 1
 	title.Position = UDim2.new(0, 12, 0, 0)
-	title.Size = UDim2.new(0, 180, 1, 0)
+	title.Size = UDim2.new(1, -90, 1, 0)
 	title.Font = Enum.Font.GothamBold
-	title.Text = "Delta Hub · G2"
-	title.TextColor3 = Color3.fromRGB(230, 230, 240)
+	title.Text = "Farm"
+	title.TextColor3 = Color3.fromRGB(240, 240, 245)
 	title.TextSize = 13
 	title.TextXAlignment = Enum.TextXAlignment.Left
+	S.UI.SectionTitle = title
 
-	local closeBtn = Instance.new("TextButton")
-	closeBtn.Parent = top
-	closeBtn.BackgroundTransparency = 1
-	closeBtn.Position = UDim2.new(1, -36, 0, 0)
-	closeBtn.Size = UDim2.new(0, 36, 1, 0)
-	closeBtn.Font = Enum.Font.GothamBold
-	closeBtn.Text = "X"
-	closeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-	closeBtn.TextSize = 14
-	closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
+	local minBtn = Instance.new("TextButton")
+	minBtn.Parent = top
+	minBtn.BackgroundTransparency = 1
+	minBtn.Position = UDim2.new(1, -34, 0, 0)
+	minBtn.Size = UDim2.new(0, 34, 1, 0)
+	minBtn.Font = Enum.Font.GothamBold
+	minBtn.Text = "-"
+	minBtn.TextColor3 = Color3.fromRGB(180, 180, 200)
+	minBtn.TextSize = 16
 
-	local tabBar = Instance.new("Frame")
-	tabBar.Parent = main
-	tabBar.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
-	tabBar.Position = UDim2.new(0, 0, 0, 36)
-	tabBar.Size = UDim2.new(1, 0, 0, 32)
-	S.UI.TabBar = tabBar
+	local side = Instance.new("Frame")
+	side.Name = "Sidebar"
+	side.Parent = sg
+	side.BackgroundTransparency = 1
+	side.Size = UDim2.new(0, 92, 0, 220)
+	side.Position = UDim2.new(0.5, -310, 0.5, -100)
+	side.Visible = false
+	S.UI.Sidebar = side
+	local sideLay = Instance.new("UIListLayout")
+	sideLay.Parent = side
+	sideLay.SortOrder = Enum.SortOrder.LayoutOrder
+	sideLay.Padding = UDim.new(0, 20)
 
 	local content = Instance.new("Frame")
 	content.Name = "ContentArea"
 	content.Parent = main
 	content.BackgroundTransparency = 1
-	content.Position = UDim2.new(0, 8, 0, 72)
-	content.Size = UDim2.new(1, -16, 1, -80)
+	content.Position = UDim2.new(0, 10, 0, 40)
+	content.Size = UDim2.new(1, -20, 1, -50)
 	S.UI.ContentArea = content
-	S.UI.Pages = S.UI.Pages or {}
+	S.UI.Content = content
 
-	-- Floating open button
-	local openBtn = Instance.new("TextButton")
-	openBtn.Parent = sg
-	openBtn.BackgroundColor3 = Color3.fromRGB(30, 80, 160)
-	openBtn.Position = UDim2.new(0.02, 0, 0.4, 0)
-	openBtn.Size = UDim2.new(0, 48, 0, 48)
-	openBtn.Font = Enum.Font.GothamBold
-	openBtn.Text = "DH"
-	openBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	openBtn.TextSize = 14
-	openBtn.Active = true
-	openBtn.Draggable = true
-	corner(openBtn, 24)
-	openBtn.MouseButton1Click:Connect(function()
-		main.Visible = not main.Visible
+	local logo = Instance.new("TextButton")
+	logo.Name = "FloatingLogo"
+	logo.Parent = sg
+	logo.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+	logo.Position = UDim2.new(0, 30, 0, 30)
+	logo.Size = UDim2.new(0, 45, 0, 45)
+	logo.Font = Enum.Font.GothamBold
+	logo.Text = "M1\nG2"
+	logo.TextColor3 = Color3.fromRGB(240, 240, 245)
+	logo.TextSize = 11
+	logo.Visible = false
+	logo.Active = true
+	logo.Draggable = true
+	corner(logo, 99)
+	S.UI.FloatingLogo = logo
+
+	minBtn.MouseButton1Click:Connect(function()
+		main.Visible = false
+		side.Visible = false
+		logo.Visible = true
 	end)
-	S.UI.OpenBtn = openBtn
+	logo.MouseButton1Click:Connect(function()
+		main.Visible = true
+		side.Visible = true
+		logo.Visible = false
+	end)
+end
+
+local function createScrollingPage(parent)
+	local sc = Instance.new("ScrollingFrame")
+	sc.Parent = parent
+	sc.BackgroundTransparency = 1
+	sc.Size = UDim2.new(1, 0, 1, 0)
+	sc.CanvasSize = UDim2.new(0, 0, 0, 0)
+	sc.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	sc.ScrollBarThickness = 4
+	sc.Visible = false
+	local lay = Instance.new("UIListLayout")
+	lay.Parent = sc
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, 8)
+	local pad = Instance.new("UIPadding")
+	pad.Parent = sc
+	pad.PaddingTop = UDim.new(0, 4)
+	pad.PaddingBottom = UDim.new(0, 8)
+	return sc
+end
+
+local function makeTabButton(name, order)
+	local b = Instance.new("TextButton")
+	b.Parent = S.UI.Sidebar
+	b.Size = UDim2.new(0, 92, 0, 42)
+	b.BackgroundColor3 = Color3.fromRGB(170, 35, 35)
+	b.Font = Enum.Font.GothamBold
+	b.Text = name
+	b.TextColor3 = Color3.fromRGB(255, 255, 255)
+	b.TextSize = 14
+	b.LayoutOrder = order
+	corner(b, 6)
+	return b
+end
+
+local function section(parent, title, order)
+	local wrap = Instance.new("Frame")
+	wrap.Parent = parent
+	wrap.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+	wrap.BackgroundTransparency = 0.25
+	wrap.Size = UDim2.new(1, -4, 0, 0)
+	wrap.AutomaticSize = Enum.AutomaticSize.Y
+	wrap.LayoutOrder = order or 1
+	corner(wrap, 8)
+	local lay = Instance.new("UIListLayout")
+	lay.Parent = wrap
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, 6)
+	local pad = Instance.new("UIPadding")
+	pad.Parent = wrap
+	pad.PaddingTop = UDim.new(0, 8)
+	pad.PaddingBottom = UDim.new(0, 8)
+	pad.PaddingLeft = UDim.new(0, 6)
+	pad.PaddingRight = UDim.new(0, 6)
+	local head = Instance.new("TextLabel")
+	head.Parent = wrap
+	head.BackgroundTransparency = 1
+	head.Size = UDim2.new(1, 0, 0, 18)
+	head.Font = Enum.Font.GothamBold
+	head.Text = title
+	head.TextColor3 = Color3.fromRGB(255, 255, 255)
+	head.TextSize = 13
+	head.TextXAlignment = Enum.TextXAlignment.Left
+	head.LayoutOrder = 0
+	return wrap
+end
+
+local function makeButton(parent, text, order)
+	local b = Instance.new("TextButton")
+	b.Parent = parent
+	b.Size = UDim2.new(1, -4, 0, 30)
+	b.BackgroundColor3 = Color3.fromRGB(36, 36, 44)
+	b.Text = text
+	b.TextColor3 = Color3.fromRGB(240, 240, 245)
+	b.Font = Enum.Font.Gotham
+	b.TextSize = 12
+	b.LayoutOrder = order or 1
+	corner(b, 6)
+	return b
 end
 
 ensureHub()
 
--- Page switch helper
-function S.showOnlyPage(name)
-	if not S.UI.Pages then return end
-	for n, page in pairs(S.UI.Pages) do
-		if page and page.Parent then
-			page.Visible = (n == name)
-		end
-	end
-end
-
--- Farm page
-local farmPage = Instance.new("ScrollingFrame")
-farmPage.Name = "FarmPage"
-farmPage.Parent = S.UI.ContentArea
-farmPage.BackgroundTransparency = 1
-farmPage.Size = UDim2.new(1, 0, 1, 0)
-farmPage.CanvasSize = UDim2.new(0, 0, 0, 420)
-farmPage.ScrollBarThickness = 4
+local farmPage = createScrollingPage(S.UI.ContentArea)
 farmPage.Visible = true
+S.UI.FarmPage = farmPage
+S.UI.Pages = S.UI.Pages or {}
 S.UI.Pages.Farm = farmPage
 
-local function makeLabel(parent, text, y)
-	local l = Instance.new("TextLabel")
-	l.Parent = parent
-	l.BackgroundTransparency = 1
-	l.Position = UDim2.new(0, 4, 0, y)
-	l.Size = UDim2.new(1, -8, 0, 20)
-	l.Font = Enum.Font.GothamBold
-	l.Text = text
-	l.TextColor3 = Color3.fromRGB(200, 200, 210)
-	l.TextSize = 12
-	l.TextXAlignment = Enum.TextXAlignment.Left
-	return l
-end
-
-makeLabel(farmPage, "Modo de ruta", 4)
-local modeRow = Instance.new("Frame")
-modeRow.Parent = farmPage
-modeRow.BackgroundTransparency = 1
-modeRow.Position = UDim2.new(0, 0, 0, 26)
-modeRow.Size = UDim2.new(1, 0, 0, 32)
-local modes = { {k="normal", t="Normal"}, {k="fast", t="Fast"}, {k="super", t="Super"} }
-for i, m in ipairs(modes) do
-	local b = Instance.new("TextButton")
-	b.Parent = modeRow
-	b.Size = UDim2.new(0.32, -4, 1, 0)
-	b.Position = UDim2.new((i-1)*0.33, 2, 0, 0)
-	b.BackgroundColor3 = (F.routeMode == m.k) and Color3.fromRGB(50, 120, 200) or Color3.fromRGB(40, 40, 50)
-	b.Font = Enum.Font.GothamBold
-	b.Text = m.t
-	b.TextColor3 = Color3.fromRGB(255, 255, 255)
-	b.TextSize = 12
-	corner(b, 6)
-	b.MouseButton1Click:Connect(function()
-		F.routeMode = m.k
-		for _, child in ipairs(modeRow:GetChildren()) do
-			if child:IsA("TextButton") then child.BackgroundColor3 = Color3.fromRGB(40, 40, 50) end
+local function showOnlyPage(page, title)
+	for _, p in pairs(S.UI.Pages) do
+		if typeof(p) == "Instance" then p.Visible = false end
+	end
+	if S.UI.ContentArea then
+		for _, ch in ipairs(S.UI.ContentArea:GetChildren()) do
+			if ch:IsA("ScrollingFrame") then ch.Visible = false end
 		end
-		b.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
+	end
+	if page then page.Visible = true end
+	if S.UI.SectionTitle and title then S.UI.SectionTitle.Text = title end
+end
+S.UI.showOnlyPage = showOnlyPage
+
+local tabFarm = makeTabButton("Farm", 1)
+tabFarm.MouseButton1Click:Connect(function()
+	showOnlyPage(farmPage, "Farm")
+end)
+
+local winsBody = section(farmPage, "Wins", 1)
+local blocks = S.orderedWinBlocks or { { real = "WinBlock1", display = "+1 Wins" } }
+local winHead = makeButton(winsBody, "  >  WinBlock: " .. (F.selectedDisplayName or "+1 Wins"), 1)
+local winList = Instance.new("Frame")
+winList.Parent = winsBody
+winList.BackgroundTransparency = 1
+winList.Size = UDim2.new(1, -4, 0, 0)
+winList.AutomaticSize = Enum.AutomaticSize.Y
+winList.Visible = false
+winList.LayoutOrder = 2
+local winLay = Instance.new("UIListLayout")
+winLay.Parent = winList
+winLay.Padding = UDim.new(0, 4)
+for i, info in ipairs(blocks) do
+	local opt = makeButton(winList, info.display, i)
+	opt.MouseButton1Click:Connect(function()
+		F.selectedRealName = info.real
+		F.selectedDisplayName = info.display
+		winHead.Text = "  >  WinBlock: " .. info.display
+		winList.Visible = false
+		F.notify("Win: " .. info.display)
 	end)
 end
+winHead.MouseButton1Click:Connect(function()
+	winList.Visible = not winList.Visible
+	winHead.Text = (winList.Visible and "  v  " or "  >  ") .. "WinBlock: " .. (F.selectedDisplayName or "?")
+end)
 
-makeLabel(farmPage, "Velocidad", 64)
 local speedBox = Instance.new("TextBox")
-speedBox.Parent = farmPage
-speedBox.Position = UDim2.new(0, 4, 0, 86)
-speedBox.Size = UDim2.new(0.5, -8, 0, 28)
-speedBox.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+speedBox.Parent = winsBody
+speedBox.Size = UDim2.new(1, -4, 0, 28)
+speedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+speedBox.Text = tostring(F.routeSpeed or 250)
+speedBox.PlaceholderText = "Velocidad (max 500)"
+speedBox.TextColor3 = Color3.fromRGB(240, 240, 245)
 speedBox.Font = Enum.Font.Gotham
-speedBox.Text = tostring(F.routeSpeed)
-speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedBox.TextSize = 13
+speedBox.TextSize = 12
+speedBox.LayoutOrder = 3
 corner(speedBox, 6)
 speedBox.FocusLost:Connect(function()
 	local n = tonumber(speedBox.Text)
-	if n and n > 0 then F.routeSpeed = n end
+	if n then F.routeSpeed = math.clamp(n, 1, 500) speedBox.Text = tostring(F.routeSpeed) end
 end)
 
-makeLabel(farmPage, "WinBlock", 122)
-local wbList = Instance.new("ScrollingFrame")
-wbList.Parent = farmPage
-wbList.Position = UDim2.new(0, 4, 0, 144)
-wbList.Size = UDim2.new(1, -8, 0, 120)
-wbList.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
-wbList.CanvasSize = UDim2.new(0, 0, 0, 0)
-wbList.ScrollBarThickness = 3
-corner(wbList, 6)
-
-local function rebuildWbList()
-	for _, c in ipairs(wbList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
-	local ordered = S.orderedWinBlocks or {}
-	local y = 2
-	for _, wb in ipairs(ordered) do
-		local b = Instance.new("TextButton")
-		b.Parent = wbList
-		b.Size = UDim2.new(1, -6, 0, 24)
-		b.Position = UDim2.new(0, 3, 0, y)
-		b.BackgroundColor3 = (F.selectedRealName == wb.real) and Color3.fromRGB(40, 100, 160) or Color3.fromRGB(36, 36, 44)
-		b.Font = Enum.Font.Gotham
-		b.Text = wb.display or wb.real
-		b.TextColor3 = Color3.fromRGB(240, 240, 245)
-		b.TextSize = 12
-		b.TextXAlignment = Enum.TextXAlignment.Left
-		corner(b, 4)
-		b.MouseButton1Click:Connect(function()
-			F.selectedRealName = wb.real
-			F.selectedDisplayName = wb.display
-			rebuildWbList()
-		end)
-		y = y + 26
-	end
-	wbList.CanvasSize = UDim2.new(0, 0, 0, y)
-end
-rebuildWbList()
-
-local startBtn = Instance.new("TextButton")
-startBtn.Parent = farmPage
-startBtn.Position = UDim2.new(0, 4, 0, 276)
-startBtn.Size = UDim2.new(0.48, -6, 0, 36)
-startBtn.BackgroundColor3 = Color3.fromRGB(40, 140, 70)
-startBtn.Font = Enum.Font.GothamBold
-startBtn.Text = "Iniciar Ruta"
-startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-startBtn.TextSize = 13
-corner(startBtn, 8)
-startBtn.MouseButton1Click:Connect(function()
-	if S.Brain and S.Brain.startRoute then
-		S.Brain.startRoute()
-		F.notify("Ruta iniciada")
-	end
+local modeBtn = makeButton(winsBody, "Modo: normal", 4)
+local modes = { "normal", "fast", "ultra" }
+local modeIdx = 1
+modeBtn.MouseButton1Click:Connect(function()
+	modeIdx = modeIdx % #modes + 1
+	F.routeMode = modes[modeIdx]
+	modeBtn.Text = "Modo: " .. F.routeMode
 end)
 
-local stopBtn = Instance.new("TextButton")
-stopBtn.Parent = farmPage
-stopBtn.Position = UDim2.new(0.52, 2, 0, 276)
-stopBtn.Size = UDim2.new(0.48, -6, 0, 36)
-stopBtn.BackgroundColor3 = Color3.fromRGB(160, 50, 50)
-stopBtn.Font = Enum.Font.GothamBold
-stopBtn.Text = "Detener"
-stopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-stopBtn.TextSize = 13
-corner(stopBtn, 8)
-stopBtn.MouseButton1Click:Connect(function()
-	if S.Brain and S.Brain.stopRoute then S.Brain.stopRoute(true) end
-end)
-
-local infToggle = Instance.new("TextButton")
-infToggle.Parent = farmPage
-infToggle.Position = UDim2.new(0, 4, 0, 320)
-infToggle.Size = UDim2.new(1, -8, 0, 30)
-infToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-infToggle.Font = Enum.Font.GothamBold
-infToggle.Text = "Infinito: OFF"
-infToggle.TextColor3 = Color3.fromRGB(255, 120, 120)
-infToggle.TextSize = 12
-corner(infToggle, 6)
-infToggle.MouseButton1Click:Connect(function()
+local infBtn = makeButton(winsBody, "Recorrido infinito: OFF", 5)
+infBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+infBtn.MouseButton1Click:Connect(function()
 	F.infinite = not F.infinite
-	infToggle.Text = "Infinito: " .. (F.infinite and "ON" or "OFF")
-	infToggle.TextColor3 = F.infinite and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 120, 120)
+	if F.infinite then
+		infBtn.Text = "Recorrido infinito: ON"
+		infBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		infBtn.Text = "Recorrido infinito: OFF"
+		infBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+	end
 end)
 
--- Tab buttons
-local function makeTab(name, label, x)
-	local b = Instance.new("TextButton")
-	b.Parent = S.UI.TabBar
-	b.Size = UDim2.new(0, 70, 1, -4)
-	b.Position = UDim2.new(0, x, 0, 2)
-	b.BackgroundColor3 = Color3.fromRGB(36, 36, 46)
-	b.Font = Enum.Font.GothamBold
-	b.Text = label
-	b.TextColor3 = Color3.fromRGB(220, 220, 230)
-	b.TextSize = 11
-	corner(b, 6)
-	b.MouseButton1Click:Connect(function()
-		S.showOnlyPage(name)
-	end)
-	return b
+local startBtn = makeButton(winsBody, "Iniciar Recorrido", 6)
+startBtn.BackgroundColor3 = Color3.fromRGB(40, 90, 50)
+F.onRouteState = function(running)
+	if running then
+		startBtn.Text = "Detener Recorrido"
+		startBtn.BackgroundColor3 = Color3.fromRGB(140, 40, 40)
+	else
+		startBtn.Text = "Iniciar Recorrido"
+		startBtn.BackgroundColor3 = Color3.fromRGB(40, 90, 50)
+	end
 end
-makeTab("Farm", "Farm", 6)
-makeTab("Player", "Player", 80)
-makeTab("Events", "Events", 154)
-makeTab("Extras", "Extras", 228)
+startBtn.MouseButton1Click:Connect(function()
+	local Brain = S.Brain
+	if not Brain then F.notify("Cerebro no listo") return end
+	if Brain.routeRunning then
+		Brain.stopRoute(true)
+		return
+	end
+	Brain.startRoute()
+end)
 
-S.UI.MainFrame.Visible = true
-setProgress(58, "Farm", "Pestaña Farm lista")
-if S.fadeAndDestroyLoading then task.delay(0.8, function() S.fadeAndDestroyLoading() end) end
+local autoBody = section(farmPage, "Auto funciones", 2)
+local rebirthBtn = makeButton(autoBody, "Auto Rebirth: OFF", 1)
+rebirthBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+rebirthBtn.MouseButton1Click:Connect(function()
+	F.autoRebirth = not F.autoRebirth
+	if F.autoRebirth then
+		rebirthBtn.Text = "Auto Rebirth: ON"
+		rebirthBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		rebirthBtn.Text = "Auto Rebirth: OFF"
+		rebirthBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+	end
+end)
+
+local treadBtn = makeButton(autoBody, "Auto Treadmill: OFF", 2)
+treadBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+treadBtn.MouseButton1Click:Connect(function()
+	F.autoTreadmill = not F.autoTreadmill
+	if F.autoTreadmill then
+		treadBtn.Text = "Auto Treadmill: ON"
+		treadBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		treadBtn.Text = "Auto Treadmill: OFF"
+		treadBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(1.5)
+		if F.autoRebirth then
+			pcall(function()
+				local ev = game:GetService("ReplicatedStorage"):FindFirstChild("Remotes")
+				ev = ev and ev:FindFirstChild("Rebirth")
+				if ev then ev:FireServer() end
+			end)
+		end
+	end
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(2)
+		if not F.autoTreadmill then continue end
+		if S.Brain and S.Brain.routeRunning then continue end
+		local names = { "TreadmillAdmin", "TreadmillCandy", "TreadmillDiamond", "TreadmillGold", "Treadmill" }
+		for _, nm in ipairs(names) do
+			local obj = workspace:FindFirstChild(nm, true)
+			if obj then
+				local conv = obj:FindFirstChild("Conveyor", true) or obj
+				local pos
+				if conv:IsA("BasePart") then pos = conv.Position
+				else
+					local okp, piv = pcall(function() return conv:GetPivot() end)
+					pos = okp and piv and piv.Position
+				end
+				if pos and S.Brain and S.Brain.requestMove then
+					S.Brain.requestMove({ pos = pos + Vector3.new(0, 3, 0), hold = 0.2 })
+				end
+				break
+			end
+		end
+	end
+end)
+
+setProgress(57, "Farm", "Pestaña Farm lista")
 print("[Delta Hub G2] farm_ui listo")
