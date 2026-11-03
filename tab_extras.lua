@@ -24,9 +24,7 @@ X.renderOn = X.renderOn or false
 X.statsOn = X.statsOn or false
 X.antiLagOn = X.antiLagOn or false
 X.antiOpts = X.antiOpts or { decorations = true, halloween = true, keycaps = true }
-X.antiSelOpen = X.antiSelOpen or false -- selector cerrado por defecto
-
-local CONFIG_FILE = "DeltaHub_G2_Config.json"
+X.antiSelOpen = X.antiSelOpen or false
 
 local function setProgress(p, title, sub)
 	if S.setProgress then S.setProgress(p, title, sub) end
@@ -145,6 +143,7 @@ local function makeToggleRow(parent, text, order, get, set)
 	btn.MouseButton1Click:Connect(function()
 		set(not get())
 		refresh()
+		if S.Config and S.Config.markDirty then S.Config.markDirty() end
 	end)
 	return row, btn, refresh
 end
@@ -216,7 +215,6 @@ local function summaryText()
 	return table.concat(parts, ", ")
 end
 
--- Header del selector (minimizable)
 local selHeader = Instance.new("TextButton")
 selHeader.Parent = antiBody
 selHeader.Size = UDim2.new(1, -4, 0, 30)
@@ -247,7 +245,6 @@ local function refreshHeader()
 end
 
 local antiSwitchRefresh
-local optButtons = {}
 
 for i, info in ipairs(optLabels) do
 	local row = Instance.new("TextButton")
@@ -261,7 +258,6 @@ for i, info in ipairs(optLabels) do
 	row.TextXAlignment = Enum.TextXAlignment.Left
 	row.LayoutOrder = i
 	corner(row, 6)
-	optButtons[info.key] = row
 	row.MouseButton1Click:Connect(function()
 		local was = X.antiOpts[info.key]
 		if was and countSelected() <= 1 then
@@ -277,6 +273,7 @@ for i, info in ipairs(optLabels) do
 			if antiSwitchRefresh then antiSwitchRefresh() end
 			notify("Anti lag OFF (cambiaste opciones)")
 		end
+		if S.Config and S.Config.markDirty then S.Config.markDirty() end
 	end)
 end
 
@@ -316,62 +313,25 @@ makeToggleRow(pantBody, "No render", 1, function() return X.renderOn end, functi
 end)
 makeToggleRow(pantBody, "Stats", 2, function() return X.statsOn end, function(v) X.statsOn = v end)
 
-local function saveConfig()
-	pcall(function()
-		if not writefile then return end
-		local Farm = S.Farm or {}
-		local P = S.Player or {}
-		local data = {
-			routeMode = Farm.routeMode, routeSpeed = Farm.routeSpeed,
-			delayTime = Farm.delayTime, selectedRealName = Farm.selectedRealName,
-			speedEnabled = P.speedEnabled, jumpEnabled = P.jumpEnabled,
-			noclipEnabled = P.noclipEnabled, infJumpEnabled = P.infJumpEnabled,
-			customSpeed = P.customSpeed, customJump = P.customJump,
-			antiOpts = X.antiOpts, renderOn = X.renderOn, statsOn = X.statsOn,
-		}
-		writefile(CONFIG_FILE, HttpService:JSONEncode(data))
-	end)
-end
-
-local function loadConfig()
-	pcall(function()
-		if not (isfile and isfile(CONFIG_FILE)) then return end
-		local data = HttpService:JSONDecode(readfile(CONFIG_FILE))
-		if type(data) ~= "table" then return end
-		local Farm = S.Farm
-		local P = S.Player or {}
-		if data.routeMode then Farm.routeMode = data.routeMode end
-		if data.routeSpeed then Farm.routeSpeed = data.routeSpeed end
-		if data.delayTime ~= nil then Farm.delayTime = data.delayTime end
-		if data.selectedRealName then Farm.selectedRealName = data.selectedRealName end
-		Farm.infinite = false
-		Farm.autoRebirth = false
-		if data.speedEnabled ~= nil then P.speedEnabled = data.speedEnabled end
-		if data.jumpEnabled ~= nil then P.jumpEnabled = data.jumpEnabled end
-		if data.noclipEnabled ~= nil then P.noclipEnabled = data.noclipEnabled end
-		if data.infJumpEnabled ~= nil then P.infJumpEnabled = data.infJumpEnabled end
-		if data.customSpeed then P.customSpeed = data.customSpeed end
-		if data.customJump then P.customJump = data.customJump end
-		if type(data.antiOpts) == "table" then X.antiOpts = data.antiOpts end
-		if data.renderOn ~= nil then X.renderOn = data.renderOn end
-		if data.statsOn ~= nil then X.statsOn = data.statsOn end
-		X.antiLagOn = false
-	end)
-end
-
-loadConfig()
 refreshHeader()
 
-pcall(function()
-	Players.PlayerRemoving:Connect(function(plr)
-		if plr == player then saveConfig() end
-	end)
-end)
-task.spawn(function()
-	while true do task.wait(20); saveConfig() end
-end)
-
-setProgress(95, "Extras", "Extras listo")
-if S.fadeAndDestroyLoading then task.delay(0.5, function() S.fadeAndDestroyLoading() end) end
+setProgress(95, "Extras", "Cargando Configuración...")
+local BASE = S.BASE_URL or "https://raw.githubusercontent.com/hv8chyfrk9-creator/mundo-1-G2/main/"
+local ok, body = pcall(function() return game:HttpGet(BASE .. "tab_config.lua") end)
+if ok and type(body) == "string" and #body > 40 then
+	local head = string.lower(string.sub(body, 1, 80))
+	if not string.find(head, "<html", 1, true) then
+		local fn, err = loadstring(body)
+		if fn then
+			local okRun, runErr = pcall(fn)
+			if not okRun then warn("[Delta Hub] tab_config run", runErr) end
+		else
+			warn("[Delta Hub] tab_config loadstring", err)
+		end
+	end
+else
+	if S.fadeAndDestroyLoading then task.delay(0.5, function() S.fadeAndDestroyLoading() end) end
+	S.scriptReady = true
+	notify("G2 listo (sin config)")
+end
 print("[Delta Hub G2] tab_extras listo")
-notify("G2 listo")
